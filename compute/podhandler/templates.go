@@ -281,6 +281,12 @@ const HostScriptTemplate = `#!/bin/bash
 #SBATCH --ntasks-per-node={{.ResourceRequest.CPU}}
 {{end}}
 
+{{- if .ResourceRequest.GPU}}
+#SBATCH --gres=gpu:{{.ResourceRequest.GPU}}
+nvidia-smi > /home/petsis/.hpk/gpu.log
+echo "CUDA_VISIBLE_DEVICES: $CUDA_VISIBLE_DEVICES" >> /home/petsis/.hpk/gpu.log
+{{end}}
+
 {{- if .ResourceRequest.Memory}}
 #SBATCH --mem={{.ResourceRequest.Memory}} 
 {{end}} 
