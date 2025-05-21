@@ -209,7 +209,8 @@ function handle_containers() {
 	sh -c {{$container.EnvFilePath}} > /scratch/{{$container.InstanceName}}.env
 	{{- end}}
 
-	$(apptainer {{ $container.ExecutionMode }} --cleanenv --writable-tmpfs --no-mount home --unsquash \
+	$(apptainer {{ $container.ExecutionMode }} \
+	--nv --cleanenv --writable-tmpfs --no-mount home --unsquash \
 	{{- if $container.RunAsUser}}
 	--security uid:{{$container.RunAsUser}},gid:{{$container.RunAsUser}} --userns \
 	{{- end}}
@@ -282,9 +283,10 @@ const HostScriptTemplate = `#!/bin/bash
 {{end}}
 
 {{- if .ResourceRequest.GPU}}
+module load cuda
+module load nvidia
+nvidia-smi > /home/petsis/.hpk/nvidia-smi.log
 #SBATCH --gres=gpu:{{.ResourceRequest.GPU}}
-nvidia-smi > /home/petsis/.hpk/gpu.log
-echo "CUDA_VISIBLE_DEVICES: $CUDA_VISIBLE_DEVICES" >> /home/petsis/.hpk/gpu.log
 {{end}}
 
 {{- if .ResourceRequest.Memory}}
@@ -315,11 +317,10 @@ chmod +x  {{.VirtualEnv.ConstructorFilePath}}
 export workdir=/tmp/{{.Pod.Namespace}}_{{.Pod.Name}}
 echo "[Host] Creating workdir: ${workdir} "
 mkdir -p ${workdir}
-trap 'echo [HOST] Deleting workdir ${workdir}; rm -rf ${workdir}' EXIT
 
 # --network-args "portmap=8080:80/tcp"
 # --container is needed to start a separate /dev/sh
-#exec {{$.HostEnv.ApptainerBin}} exec --containall --net --fakeroot --scratch /scratch --workdir ${workdir} \
+#exec {{$.HostEnv.ApptainerBin}} exec --nv --containall --net --fakeroot --scratch /scratch --workdir ${workdir} \
 #{{- if .HostEnv.EnableCgroupV2}}
 #--apply-cgroups {{.VirtualEnv.CgroupFilePath}} 		\
 #{{- end}}
@@ -331,7 +332,7 @@ trap 'echo [HOST] Deleting workdir ${workdir}; rm -rf ${workdir}' EXIT
 
 export APPTAINERENV_KUBEDNS_IP={{.HostEnv.KubeDNS}}
 
-exec {{$.HostEnv.ApptainerBin}} exec --containall --net --fakeroot --scratch /scratch --workdir ${workdir} \
+exec {{$.HostEnv.ApptainerBin}} exec --nv --containall --net --fakeroot --scratch /scratch --workdir ${workdir} \
 {{- if .HostEnv.EnableCgroupV2}}
 --apply-cgroups {{.VirtualEnv.CgroupFilePath}} 		\
 {{- end}}

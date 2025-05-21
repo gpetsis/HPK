@@ -73,6 +73,8 @@ func main() {
 	var namespaceID string
 	var wg sync.WaitGroup
 
+	exec.Command("echo", "Running giannispetsis > /home/petsis/.hpk/hpk.log").Run()
+
 	flag.StringVar(&podID, "pod", "", "Pod ID to query Kubernetes")
 	flag.StringVar(&namespaceID, "namespace", "", "Pod ID to query Kubernetes")
 	flag.Parse()
@@ -378,7 +380,7 @@ func handleInitContainers(pod *v1.Pod, hpkEnv bool) error {
 			apptainerVerbosity = "--debug"
 		}
 		apptainerArgs := []string{
-			apptainerVerbosity, executionMode, "--cleanenv", "--writable-tmpfs", "--no-mount", "home", "--unsquash",
+			apptainerVerbosity, executionMode, "--nv", "--cleanenv", "--writable-tmpfs", "--no-mount", "home", "--unsquash",
 		}
 		if hpkEnv {
 			apptainerArgs = append(apptainerArgs, "--bind", "/scratch/etc/resolv.conf:/etc/resolv.conf,/scratch/etc/hosts:/etc/hosts")
@@ -505,7 +507,7 @@ func handleContainers(pod *v1.Pod, wg *sync.WaitGroup, hpkEnv bool) error {
 			apptainerVerbosity = "--debug"
 		}
 		apptainerArgs := []string{
-			apptainerVerbosity, executionMode, "--cleanenv", "--writable-tmpfs", "--no-mount", "home", "--unsquash",
+			apptainerVerbosity, executionMode, "--nv", "--cleanenv", "--writable-tmpfs", "--no-mount", "home", "--unsquash",
 		}
 		if hpkEnv {
 			apptainerArgs = append(apptainerArgs, "--bind", "/scratch/etc/resolv.conf:/etc/resolv.conf,/scratch/etc/hosts:/etc/hosts")
