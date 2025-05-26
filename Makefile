@@ -24,7 +24,7 @@ IMAGE_REGISTRY ?= giannispetsis
 
 K3S_IMAGE_TAG=$(IMAGE_REGISTRY)/hpk-master:$(VERSION)
 
-PAUSE_IMAGE_TAG=$(IMAGE_REGISTRY)/pause:$(VERSION)
+export PAUSE_IMAGE_TAG=$(IMAGE_REGISTRY)/pause:$(VERSION)
 
 print:
 	echo $(VERSION_FLAGS)
@@ -95,6 +95,7 @@ help: ## Display this help
 ##@ Build
 
 build: hpk-kubelet hpk-pause	## Build HPK binary
+
 build-race: ## Build HPK binary with race condition detector
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $(VERSION_FLAGS) -race -o bin/hpk-kubelet ./cmd/hpk
 
