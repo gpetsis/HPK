@@ -24,7 +24,7 @@ REGISTRY_NAME ?= carvicsforth
 
 K3S_IMAGE_TAG=$(REGISTRY_NAME)/hpk-master:$(VERSION)
 
-PAUSE_IMAGE_TAG=$(REGISTRY_NAME)/pause:$(VERSION)
+export PAUSE_IMAGE_TAG=$(REGISTRY_NAME)/pause:$(VERSION)
 
 define WEBHOOK_CONFIGURATION
 apiVersion: admissionregistration.k8s.io/v1
@@ -92,6 +92,7 @@ help: ## Display this help
 ##@ Build
 
 build: hpk-kubelet hpk-pause	## Build HPK binary
+
 build-race: ## Build HPK binary with race condition detector
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $(VERSION_FLAGS) -race -o bin/hpk-kubelet ./cmd/hpk
 
@@ -103,11 +104,11 @@ hpk-pause:
 
 image-pause:
 	DOCKER_BUILDKIT=1 docker build . -t $(PAUSE_IMAGE_TAG) -f deploy/images/pause-apptainer-agent/pause.apptainer.Dockerfile
-	sudo docker push $(PAUSE_IMAGE_TAG)
+	docker push $(PAUSE_IMAGE_TAG)
 
 image-kubemaster: ## Build and push the Kubernetes Master image
 	(cd k3s && DOCKER_BUILDKIT=1 docker build . -t $(K3S_IMAGE_TAG) -f Dockerfile)
-	sudo docker push $(K3S_IMAGE_TAG)
+	docker push $(K3S_IMAGE_TAG)
 
 build-all: image-kubemaster image-pause build ## Build kubemaster and binaries
 
