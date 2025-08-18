@@ -285,7 +285,6 @@ const HostScriptTemplate = `#!/bin/bash
 {{- if .ResourceRequest.GPU}}
 module load cuda
 module load nvidia
-nvidia-smi > /home/petsis/.hpk/nvidia-smi.log
 #SBATCH --gres=gpu:{{.ResourceRequest.GPU}}
 {{end}}
 

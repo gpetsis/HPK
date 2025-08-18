@@ -73,8 +73,6 @@ func main() {
 	var namespaceID string
 	var wg sync.WaitGroup
 
-	exec.Command("echo", "Running giannispetsis > /home/petsis/.hpk/hpk.log").Run()
-
 	flag.StringVar(&podID, "pod", "", "Pod ID to query Kubernetes")
 	flag.StringVar(&namespaceID, "namespace", "", "Pod ID to query Kubernetes")
 	flag.Parse()
