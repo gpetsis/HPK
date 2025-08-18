@@ -37,16 +37,18 @@ For the infrastructure:
     *   Creates the `kubeflow` namespace. (!!)
     *   Employs Helm to install (or upgrade) a JupyterHub instance named `my-jupyter`.
 
-5.  **Get MinIO Credentials:**
+<!-- 5.  **Get MinIO Credentials:**
     *   Retrieves the access key and secret key for the MinIO instance from a  Kubernetes secret named "myminio".
     *   Displays these credentials to use them inside the notebook 
 
 6.  **Download and Configure MinIO Client (`mc`):**
     *  Retrieves the internal MinIO service IP address (`ENDPOINT`) 
-    *  Sets up an `mc` alias named 'local' targeting the MinIO instance and using the retrieved credentials.
+    *  Sets up an `mc` alias named 'local' targeting the MinIO instance and using the retrieved credentials. -->
 
-7.  **Create MinIO Bucket:**
-    *   Creates a bucket named 'kubeflow-examples' in MinIO.
+<!-- 7.  **Create MinIO Bucket:**
+    *   Creates a bucket named 'kubeflow-examples' in MinIO. -->
+
+> also, modify the /etc/apptainer/apptainer.conf file, to increase the overlay storage to something like 32GB on the `sessiondir max size` field
 
 ## **Notebook Structure**
 
