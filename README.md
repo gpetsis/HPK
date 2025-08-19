@@ -1,7 +1,7 @@
 # High-Performance Kubernetes
 
 High-Performance [Kubernetes](https://kubernetes.io/) (HPK), allows HPC users to run their own private "mini Clouds" on
-a typical HPC cluster. HPK uses [a single container](https://github.com/chazapis/kubernetes-from-scratch) to run the
+a typical HPC cluster. HPK uses [a single container](https://github.com/chazapis/kubernetes-from-scratch) (there is also an [experimental version](https://k3s.io)) to run the
 Kubernetes control plane and a [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) Provider
 implementation to translate container lifecycle management commands from Kubernetes-native
 to [Slurm](https://slurm.schedmd.com/)/[Apptainer](https://github.com/apptainer/apptainer).
@@ -26,7 +26,7 @@ HPK is a continuation of the [KNoC](https://github.com/CARV-ICS-FORTH/knoc) proj
 
 ## Trying it out
 
-First you need to configure Apptainer for HPK. The [install-environment.sh](test/install-environment.sh) script showcases how we implement the requirements in a single node for testing.
+First you need to configure Apptainer for HPK. The [install-slurm.sh](test/install-slurm.sh) script showcases how we implement the requirements in a single node for testing.
 
 Once setup, compile the `hpk-kubelet` using `make`.
 
@@ -59,7 +59,7 @@ kubectl get nodes
 In case that you experience DNS issues, you should retry starting the Kubernetes Master with:
 ```
 export EXTERNAL_DNS=<your dns server>
-make run-kubemaster
+make run-hpk-master
 ```
 
 The above command will set CoreDNS to forward requests for external names to your DNS server.
