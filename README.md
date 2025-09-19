@@ -26,7 +26,7 @@ HPK is a continuation of the [KNoC](https://github.com/CARV-ICS-FORTH/knoc) proj
 
 ## Trying it out
 
-First you need to configure Apptainer for HPK. The [install-slurm.sh](test/install-slurm.sh) script showcases how we implement the requirements in a single node for testing.
+First you need to configure Apptainer for HPK. The [install-slurm.sh](deploy/aws/install-hpk-requirements.sh) script showcases how we implement the requirements in a single node for testing.
 
 Once setup, compile the `hpk-kubelet` using `make`.
 
