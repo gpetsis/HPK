@@ -50,6 +50,21 @@ For the infrastructure:
 
 > also, modify the /etc/apptainer/apptainer.conf file, to increase the overlay storage to something like 32GB on the `sessiondir max size` field
 
+To create an alias for MinIO:
+> kubectl port-forward svc/myminio -n minio 9000:9000
+
+then: 
+`MC_ACCESS_KEY=$(kubectl get secret myminio -n minio -o jsonpath="{.data.rootUser}" | base64 --decode)` 
+
+and:  
+`MC_SECRET_KEY=$(kubectl get secret myminio -n minio -o jsonpath="{.data.rootPassword}" | base64 --decode)`
+
+and:
+`./mc alias set local http://localhost:9000 $MC_ACCESS_KEY $MC_SECRET_KEY`
+
+and finally, create the bucket:
+`mc mb local/kubeflow-examples`.
+
 ## **Notebook Structure**
 
 1. **Import Libraries:** Load necessary libraries for model fine-tuning, data processing, distributed training, and S3 interaction.
