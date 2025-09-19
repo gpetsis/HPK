@@ -114,6 +114,17 @@ build-all: image-kubemaster image-pause build ## Build kubemaster and binaries
 
 ##@ Deployment
 
+run-kubemaster: ## Run the Kubernetes Master
+	mkdir -p ${HPK_MASTER_PATH}/log
+	apptainer run --net --dns ${EXTERNAL_DNS} --fakeroot \
+	--cleanenv --pid --containall \
+	--no-init --no-umask --no-eval \
+	--no-mount tmp,home --unsquash --writable \
+	--env K8SFS_MOCK_KUBELET=0 \
+	--bind ${HPK_MASTER_PATH}:/usr/local/etc \
+	--bind ${HPK_MASTER_PATH}/log:/var/log \
+	docker://chazapis/kubernetes-from-scratch:20230425
+
 run-hpk-master:
 	mkdir -p ${HPK_MASTER_PATH}/log
 	apptainer run --net --dns ${EXTERNAL_DNS} --fakeroot \
