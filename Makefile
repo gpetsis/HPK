@@ -14,13 +14,14 @@ BUILD_DATE ?= $(shell date -u '+%Y-%m-%d-%H:%M UTC')
 VERSION_FLAGS := -ldflags='-X "main.buildVersion=$(BUILD_VERSION)" -X "main.buildTime=$(BUILD_DATE)"'
 
 VERSION = $(shell cat VERSION)
+VERSION = 4
 
 # Deployment options
 HPK_MASTER_PATH ?= ${HOME}/.hpk-master
 KUBE_PATH ?= ${HPK_MASTER_PATH}/kubernetes
 EXTERNAL_DNS ?= 8.8.8.8
 
-REGISTRY_NAME ?= carvicsforth
+REGISTRY_NAME ?= giannispetsis
 
 K3S_IMAGE_TAG=$(REGISTRY_NAME)/hpk-master:$(VERSION)
 

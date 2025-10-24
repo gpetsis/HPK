@@ -73,8 +73,6 @@ func main() {
 	var namespaceID string
 	var wg sync.WaitGroup
 
-	exec.Command("echo", "Running giannispetsis > /home/petsis/.hpk/hpk.log").Run()
-
 	flag.StringVar(&podID, "pod", "", "Pod ID to query Kubernetes")
 	flag.StringVar(&namespaceID, "namespace", "", "Pod ID to query Kubernetes")
 	flag.Parse()
@@ -202,27 +200,33 @@ func prepareContainers(pod *v1.Pod) error {
 }
 
 func announceIP(pod *v1.Pod) error {
-	podKey := client.ObjectKeyFromObject(pod)
-	hpk := endpoint.HPK(pod.Annotations["workingDirectory"])
-	podPath := hpk.Pod(podKey)
+    podKey := client.ObjectKeyFromObject(pod)
+    hpk := endpoint.HPK(pod.Annotations["workingDirectory"])
+    podPath := hpk.Pod(podKey)
 
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return fmt.Errorf("could not get interfaces from host: %v", err)
-	}
-	var ipAddresses []string
-	for _, addr := range addrs {
-		// Add only if the address is an IP address
-		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() && ipNet.IP.To4() != nil {
-			ipAddresses = append(ipAddresses, ipNet.IP.String())
-		}
-	}
-	ipString := strings.Join(ipAddresses, " ")
+    // Get all interface addresses
+    addrs, err := net.InterfaceAddrs()
+    if err != nil {
+        return fmt.Errorf("could not get interfaces from host: %v", err)
+    }
 
-	if err := os.WriteFile(podPath.IPAddressPath(), []byte(ipString), os.ModePerm); err != nil {
-		return fmt.Errorf("error writing to .ip file: %v", err)
-	}
-	return nil
+    var primaryIP string
+    for _, addr := range addrs {
+        if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() && ipNet.IP.To4() != nil {
+            primaryIP = ipNet.IP.String()
+            break
+        }
+    }
+
+    if primaryIP == "" {
+        return fmt.Errorf("no non-loopback IPv4 address found")
+    }
+
+    if err := os.WriteFile(podPath.IPAddressPath(), []byte(primaryIP), 0644); err != nil {
+        return fmt.Errorf("error writing to .ip file: %v", err)
+    }
+
+    return nil
 }
 
 func cleanEnvironment() error {
@@ -251,7 +255,8 @@ func cleanEnvironment() error {
 }
 
 func prepareDNS(pod *v1.Pod) error {
-	if err := os.MkdirAll("/scratch/etc", 0644); err != nil {
+	dir := os.ExpandEnv("$HOME/scratch/etc")
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("could not create /scratch/etc folder: %v", err)
 	}
 
@@ -268,8 +273,9 @@ nameserver %s
 options ndots:5
 `, pod.Namespace, kubeDNSIP)
 
-	if err := os.WriteFile("/scratch/etc/resolv.conf", []byte(resolvConfContent), os.ModePerm); err != nil {
-		return fmt.Errorf("error writing to resolv.conf: %v", err)
+	resolvConfPath := os.ExpandEnv("$HOME/scratch/etc/resolv.conf")
+	if err := os.WriteFile(resolvConfPath, []byte(resolvConfContent), 0644); err != nil {
+		return fmt.Errorf("error writing resolv.conf: %v", err)
 	}
 
 	// Add hostname to /scratch/etc/hosts
@@ -294,7 +300,8 @@ options ndots:5
 
 	hostsContent := fmt.Sprintf("127.0.0.1 localhost\n%s \n", ipString)
 
-	if err := os.WriteFile("/scratch/etc/hosts", []byte(hostsContent), os.ModePerm); err != nil {
+	dir = os.ExpandEnv("$HOME/scratch/etc/hosts")
+	if err := os.WriteFile(dir, []byte(hostsContent), os.ModePerm); err != nil {
 		return fmt.Errorf("error writing to hosts: %v", err)
 	}
 	DebugDNSInfo(resolvConfContent, hostsContent)
@@ -328,7 +335,8 @@ func handleInitContainers(pod *v1.Pod, hpkEnv bool) error {
 			if err != nil {
 				return fmt.Errorf("error executing EnvFilePath: %v, output: %s", err, output)
 			}
-			envFileName := filepath.Join("/scratch", instanceName+".env")
+			dir := os.ExpandEnv("$HOME/scratch")
+			envFileName := filepath.Join(dir, instanceName+".env")
 			if err := os.WriteFile(envFileName, output, 0644); err != nil {
 				return fmt.Errorf("error writing env file: %v", err)
 			}
@@ -383,7 +391,8 @@ func handleInitContainers(pod *v1.Pod, hpkEnv bool) error {
 			apptainerVerbosity, executionMode, "--nv", "--cleanenv", "--writable-tmpfs", "--no-mount", "home", "--unsquash",
 		}
 		if hpkEnv {
-			apptainerArgs = append(apptainerArgs, "--bind", "/scratch/etc/resolv.conf:/etc/resolv.conf,/scratch/etc/hosts:/etc/hosts")
+			dir := os.ExpandEnv("$HOME/scratch/etc/resolv.conf:/etc/resolv.conf,$HOME/scratch/etc/hosts:/etc/hosts")
+			apptainerArgs = append(apptainerArgs, "--bind", dir)
 		}
 		if len(binds) > 0 {
 			bindArgs := &apptainerArgs[len(apptainerArgs)-1]
@@ -397,7 +406,8 @@ func handleInitContainers(pod *v1.Pod, hpkEnv bool) error {
 		}
 
 		if fileExists(envFilePath) {
-			apptainerArgs = append(apptainerArgs, "--env-file", filepath.Join("/scratch", instanceName+".env"))
+			dir := os.ExpandEnv("$HOME/scratch")
+			apptainerArgs = append(apptainerArgs, "--env-file", filepath.Join(dir, instanceName+".env"))
 		}
 
 		apptainerArgs = append(apptainerArgs, hpk.ImageDir()+image.ParseImageName(container.Image))
@@ -455,7 +465,8 @@ func handleContainers(pod *v1.Pod, wg *sync.WaitGroup, hpkEnv bool) error {
 			if err != nil {
 				return fmt.Errorf("error executing EnvFilePath: %v, output: %s", err, output)
 			}
-			envFileName := filepath.Join("/scratch", instanceName+".env")
+			dir := os.ExpandEnv("$HOME/scratch")
+			envFileName := filepath.Join(dir, instanceName+".env")
 			if err := os.WriteFile(envFileName, output, 0644); err != nil {
 				return fmt.Errorf("error writing env file: %v", err)
 			}
@@ -510,7 +521,8 @@ func handleContainers(pod *v1.Pod, wg *sync.WaitGroup, hpkEnv bool) error {
 			apptainerVerbosity, executionMode, "--nv", "--cleanenv", "--writable-tmpfs", "--no-mount", "home", "--unsquash",
 		}
 		if hpkEnv {
-			apptainerArgs = append(apptainerArgs, "--bind", "/scratch/etc/resolv.conf:/etc/resolv.conf,/scratch/etc/hosts:/etc/hosts")
+			dir := os.ExpandEnv("$HOME/scratch/etc/resolv.conf:/etc/resolv.conf,$HOME/scratch/etc/hosts:/etc/hosts")
+			apptainerArgs = append(apptainerArgs, "--bind", dir)
 			if len(binds) > 0 {
 				bindArgs := &apptainerArgs[len(apptainerArgs)-1]
 				*bindArgs += "," + strings.Join(binds, ",")
@@ -524,7 +536,8 @@ func handleContainers(pod *v1.Pod, wg *sync.WaitGroup, hpkEnv bool) error {
 		}
 
 		if fileExists(envFilePath) {
-			apptainerArgs = append(apptainerArgs, "--env-file", filepath.Join("/scratch", instanceName+".env"))
+			dir := os.ExpandEnv("$HOME/scratch")
+			apptainerArgs = append(apptainerArgs, "--env-file", filepath.Join(dir, instanceName+".env"))
 		}
 
 		apptainerArgs = append(apptainerArgs, hpk.ImageDir()+image.ParseImageName(container.Image))

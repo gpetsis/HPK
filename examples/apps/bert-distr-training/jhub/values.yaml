@@ -15,16 +15,19 @@ proxy:
   service:
     type: ClusterIP
   https:
-    enabled: true
+    enabled: false
   chp:
     networkPolicy:
       enabled: false
 singleuser:
   serviceAccountName: training-operator
+  cloudMetadata:
+    blockWithIptables: false
   storage:
-    dynamic:
-      storageClass: openebs-hostpath
-    capacity: 30Gi 
+    type: none
+#     dynamic:
+#      storageClass: openebs-hostpath
+#    capacity: 30Gi 
     # type: "static"
     # capacity: "10Gi"
     # static:

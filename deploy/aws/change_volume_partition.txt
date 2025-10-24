@@ -1,0 +1,4 @@
+sudo growpart /dev/nvme0n1 1
+sudo resize2fs /dev/nvme0n1p1
+
+sudo tar -C /usr/local -xzf go1.22.3.linux-amd64.tar.gz

@@ -1,0 +1,4 @@
+pcluster update-compute-fleet --cluster-name hpk-gpu-cluster --status STOP_REQUESTED
+pcluster update-compute-fleet --cluster-name hpk-gpu-cluster --status START_REQUESTED
+pcluster ssh --cluster-name hpk-gpu-cluster -i "hpk-gpu-cluster-keypair.pem"
+

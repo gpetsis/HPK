@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export KUBECONFIG=~/.hpk-master/kubernetes/admin.conf
+
 #install minio
 pushd minio
 # kubectl delete -f hostpath-storage.yaml

@@ -1,8 +1,13 @@
+export KUBECONFIG=~/.hpk-master/kubernetes/admin.conf
+
 TEST_NAMESPACE=minio
+
+set -x
 
 # Install Minio
 helm install --debug --wait \
   my-minio minio/minio \
+  --create-namespace \
   --namespace "${TEST_NAMESPACE}" \
   --set resources.requests.memory=512Mi \
   --set replicas=1 \

@@ -4,25 +4,30 @@ Image:
 HeadNode:
   InstanceType: t3.medium
   Networking:
-    SubnetId: subnet-0fb707ace6861ac83
+    SubnetId: subnet-0ae8156ce75d4988c
   Ssh:
     KeyName: hpk-gpu-cluster-keypair
   CustomActions:
     OnNodeConfigured:
-      Script: https://raw.githubusercontent.com/CARV-ICS-FORTH/HPK/blob/main/deploy/aws/install-hpk-requirements.sh
+      Script: https://raw.githubusercontent.com/CARV-ICS-FORTH/HPK/refs/heads/main/deploy/aws/install-hpk-requirements.sh
+
 Scheduling:
   Scheduler: slurm
   SlurmQueues:
   - Name: queue1
+    ComputeSettings:
+      LocalStorage:
+        RootVolume:
+          Size: 168
     ComputeResources:
-    - Name: gpus
+    - Name: g4dn4xlarge
       Instances:
       - InstanceType: g4dn.4xlarge
       MinCount: 4
       MaxCount: 4
     Networking:
       SubnetIds:
-      - subnet-093183fc36002e242
+      - subnet-00b91b845b10a08b2
     CustomActions:
       OnNodeConfigured:
-        Script: https://raw.githubusercontent.com/CARV-ICS-FORTH/HPK/blob/main/deploy/aws/install-hpk-requirements.sh
+        Script: https://raw.githubusercontent.com/CARV-ICS-FORTH/HPK/refs/heads/main/deploy/aws/install-hpk-requirements.sh

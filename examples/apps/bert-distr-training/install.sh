@@ -1,4 +1,8 @@
 #!/bin/bash
+set -x
+
+export KUBECONFIG=/home/petsis/.hpk-master/kubernetes/admin.conf
+
 helm repo add minio https://charts.min.io/
 helm repo add jupyterhub https://hub.jupyter.org/helm-chart/
 helm repo update
@@ -15,12 +19,13 @@ kubectl create ns minio
 popd
 
 # install kubeflow operator
-kubectl apply --wait=true -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.7.0"
+# kubectl apply --wait=true -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.9.2"
+kubectl apply --server-side --force-conflicts -k "github.com/kubeflow/training-operator.git/manifests/overlays/standalone?ref=v1.9.2"
 
 pushd jhub
 kubectl create ns kubeflow
 # kubectl apply -f hostpath-storage.yaml
-helm upgrade --cleanup-on-fail --install my-jupyter jupyterhub/jupyterhub --namespace kubeflow --create-namespace --values values.yaml
+helm upgrade --cleanup-on-fail --install my-jupyter jupyterhub/jupyterhub --namespace kubeflow --create-namespace --values values.yaml --version 3.3.8
 
 MC_ACCESS_KEY=$(kubectl get secret myminio -n minio -o jsonpath="{.data.rootUser}" | base64 --decode)
 MC_SECRET_KEY=$(kubectl get secret myminio -n minio -o jsonpath="{.data.rootPassword}" | base64 --decode)
@@ -45,8 +50,7 @@ if [[ -z "$ENDPOINT" ]]; then
     echo "Error: Could not get the first endpoint for MinIO service"
     exit 1
 fi
- 
 
-./mc alias set local http://$ENDPOINT:9000 $MC_ACCESS_KEY $MC_SECRET_KEY
-./mc mb local/kubeflow-examples 
+# ./mc alias set local http://localhost:9000 $MC_ACCESS_KEY $MC_SECRET_KEY
+# ./mc mb local/kubeflow-examples
 # create bucket "kubeflow-examples" through minio-console

@@ -11,7 +11,7 @@ RUN make hpk-pause
 
 FROM ubuntu:latest
 
-ENV VERSION 1.1.9
+ENV VERSION 1.3.6
 
 RUN apt-get update && apt-get install -y wget
 

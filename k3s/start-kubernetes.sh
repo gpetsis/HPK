@@ -6,7 +6,11 @@ HPK_MASTER_LOG_DIR=/var/log/hpk-master
 mkdir -p ${HPK_MASTER_LOG_DIR}
 mkdir -p ${HPK_MASTER_CONF_DIR}/kubernetes
 
-export IP_ADDRESS=`ip route get 1 | sed -n 's/.*src \([0-9.]\+\).*/\1/p'`
+# export IP_ADDRESS=`ip route get 1 | sed -n 's/.*src \([0-9.]\+\).*/\1/p'`
+# export DNS_IP_ADDRESS=`ip route get 1 | sed -n 's/.*src \([0-9.]\+\).*/\1/p'`
+
+export IP_ADDRESS=10.3.24.74
+export DNS_IP_ADDRESS=10.3.24.74
 
 rm -f ${HPK_MASTER_CONF_DIR}/kubernetes/admin.conf
 
@@ -21,11 +25,15 @@ k3s server \
   --disable-cloud-controller \
   --write-kubeconfig-mode 777 \
   --bind-address ${IP_ADDRESS} \
-  --node-ip=${IP_ADDRESS} \
+  --node-ip=${DNS_IP_ADDRESS} \
+  --advertise-address ${DNS_IP_ADDRESS} \
+  --tls-san ${DNS_IP_ADDRESS} \
   --write-kubeconfig ${HPK_MASTER_CONF_DIR}/kubernetes/admin.conf \
   &> ${HPK_MASTER_LOG_DIR}/k3s.log &
 
-echo -e "\n----------\nWaiting for K3s server to be created...\n----------"
+echo -e "----------\nIP Address: ${IP_ADDRESS} DNS IP Address: ${DNS_IP_ADDRESS}\n----------"
+
+echo -e "----------\nWaiting for K3s server to be created...\n----------"
 while [ ! -f ${HPK_MASTER_CONF_DIR}/kubernetes/admin.conf ]; do
   sleep 1
 done
@@ -84,7 +92,7 @@ metadata:
   namespace: kube-system
 subsets:
 - addresses:
-  - ip: ${IP_ADDRESS}
+  - ip: ${DNS_IP_ADDRESS}
     nodeName: k8s-control
   ports:
   - name: dns
