@@ -16,7 +16,14 @@
 package slurm
 
 import (
+	"bufio"
 	"context"
+	"strconv"
+	"strings"
+
+	"os"
+	"runtime"
+	"syscall"
 
 	"github.com/carv-ics-forth/hpk/compute"
 	"github.com/carv-ics-forth/hpk/pkg/process"
@@ -33,29 +40,50 @@ func TotalResources() corev1.ResourceList {
 		totalEphemeral resource.Quantity
 		totalPods      resource.Quantity
 	)
+	if compute.Environment.RunSlurm {
+		for _, node := range getClusterStats().Nodes {
+			nodeResources := node.ResourceList()
 
-	for _, node := range getClusterStats().Nodes {
-		nodeResources := node.ResourceList()
+			if cpu := nodeResources.Cpu(); !cpu.IsZero() {
+				totalCPU.Add(*cpu)
+			}
 
-		if cpu := nodeResources.Cpu(); !cpu.IsZero() {
-			totalCPU.Add(*cpu)
+			if mem := nodeResources.Memory(); !mem.IsZero() {
+				totalMem.Add(*mem)
+			}
+
+			if storage := nodeResources.Storage(); !storage.IsZero() {
+				totalStorage.Add(*storage)
+			}
+
+			if ephemeral := nodeResources.StorageEphemeral(); !ephemeral.IsZero() {
+				totalEphemeral.Add(*ephemeral)
+			}
+
+			if pods := nodeResources.Pods(); !pods.IsZero() {
+				totalPods.Add(*pods)
+			}
 		}
+	} else {
+		// Need: totalCPU, totalMem, totalStorage, totalEphemeral, totalPods
+		cpuCount := int64(runtime.NumCPU())
+		cpuQuantity := resource.NewQuantity(cpuCount, resource.DecimalSI)
+		totalCPU.Add(*cpuQuantity)
 
-		if mem := nodeResources.Memory(); !mem.IsZero() {
-			totalMem.Add(*mem)
-		}
+		mem := getTotalMemory()
+		memQuantity := resource.NewQuantity(int64(mem), resource.DecimalSI)
+		totalMem.Add(*memQuantity)
 
-		if storage := nodeResources.Storage(); !storage.IsZero() {
-			totalStorage.Add(*storage)
-		}
+		storage := getTotalStorage("/")
+		storageQuantity := resource.NewQuantity(int64(storage), resource.DecimalSI)
+		totalStorage.Add(*storageQuantity)
 
-		if ephemeral := nodeResources.StorageEphemeral(); !ephemeral.IsZero() {
-			totalEphemeral.Add(*ephemeral)
-		}
+		ephemeral := getTotalStorage("/")
+		ephemeralQuantity := resource.NewQuantity(int64(ephemeral), resource.DecimalSI)
+		totalEphemeral.Add(*ephemeralQuantity)
 
-		if pods := nodeResources.Pods(); !pods.IsZero() {
-			totalPods.Add(*pods)
-		}
+		podsQuantity := resource.MustParse("110")
+		totalPods.Add(podsQuantity)
 	}
 
 	return corev1.ResourceList{
@@ -78,7 +106,7 @@ type NodeInfo struct {
 	Name     string `json:"name"`
 	CPUs     uint64 `json:"cpus"`
 	CPUCores uint64 `json:"cores"`
-	GPUs	 uint64 `json:"nvidia.com/gpu"`
+	GPUs     uint64 `json:"nvidia.com/gpu"`
 
 	EphemeralStorage uint64 `json:"temporary_disk"`
 
@@ -91,11 +119,11 @@ type NodeInfo struct {
 // ResourceList converts the Slurm-reported stats into Kubernetes-Stats.
 func (i NodeInfo) ResourceList() corev1.ResourceList {
 	return corev1.ResourceList{
-		"cpu":       			*resource.NewQuantity(int64(i.CPUs), resource.DecimalSI),
-		"memory":    			*resource.NewScaledQuantity(int64(i.FreeMemory), resource.Mega),
-		"ephemeral": 			*resource.NewQuantity(int64(i.EphemeralStorage), resource.DecimalSI),
-		"pods":      			resource.MustParse("110"),
-		"gpu":       			*resource.NewQuantity(int64(i.GPUs), resource.DecimalSI),
+		"cpu":       *resource.NewQuantity(int64(i.CPUs), resource.DecimalSI),
+		"memory":    *resource.NewScaledQuantity(int64(i.FreeMemory), resource.Mega),
+		"ephemeral": *resource.NewQuantity(int64(i.EphemeralStorage), resource.DecimalSI),
+		"pods":      resource.MustParse("110"),
+		"gpu":       *resource.NewQuantity(int64(i.GPUs), resource.DecimalSI),
 	}
 }
 
@@ -116,4 +144,45 @@ func getClusterStats() Stats {
 	}
 
 	return info
+}
+
+func getTotalMemory() uint64 {
+	file, err := os.Open("/proc/meminfo")
+	if err != nil {
+		compute.SystemPanic(err, "Opening /proc/meminfo")
+		return 0
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "MemTotal:") {
+			parts := strings.Fields(line)
+			if len(parts) < 2 {
+				continue
+			}
+
+			kb, _ := strconv.ParseUint(parts[1], 10, 64)
+			return kb / 1024
+		}
+	}
+
+	compute.SystemPanic(err, "MemTotal not found")
+
+	return 0
+}
+
+func getTotalStorage(path string) uint64 {
+	var stat syscall.Statfs_t
+
+	err := syscall.Statfs(path, &stat)
+	if err != nil {
+		compute.SystemPanic(err, "Syscall Statfs")
+		return 0
+	}
+
+	totalBytes := stat.Blocks * uint64(stat.Bsize)
+
+	return totalBytes / (1024 * 1024)
 }
